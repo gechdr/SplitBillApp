@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Split Bill</title>
+    <title>Split Bill - Split Your Bills Easily</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💰</text></svg>">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -129,7 +130,7 @@
         // --- CUSTOM ACCOUNT SELECTOR COMPONENT ---
         const AccountSelector = ({ options, selectedValue, onChange, label, customName, customNumber, customVendor, onCustomNameChange, onCustomNumberChange, onCustomVendorChange, onSaveCustomAccount, onDeleteAccount }) => {
             const [isOpen, setIsOpen] = useState(false);
-            const [showCustomInput, setShowCustomInput] = useState(selectedValue === 'CUSTOM');
+            const [showCustomModal, setShowCustomModal] = useState(false);
             const dropdownRef = useRef(null);
 
             useEffect(() => {
@@ -142,10 +143,6 @@
                 return () => document.removeEventListener('mousedown', handleClickOutside);
             }, []);
 
-            useEffect(() => {
-                setShowCustomInput(selectedValue === 'CUSTOM');
-            }, [selectedValue]);
-
             const selectedOption = options.find(opt => opt.number === selectedValue) || options[0];
             
             // Separate custom and regular accounts
@@ -153,9 +150,13 @@
             const regularAccounts = options.filter(opt => opt.number !== 'CUSTOM');
 
             const handleSelect = (accountNumber) => {
-                onChange(accountNumber);
-                setIsOpen(false);
-                setShowCustomInput(accountNumber === 'CUSTOM');
+                if (accountNumber === 'CUSTOM') {
+                    setIsOpen(false);
+                    setShowCustomModal(true);
+                } else {
+                    onChange(accountNumber);
+                    setIsOpen(false);
+                }
             };
 
             const handleDelete = (e, accountNumber) => {
@@ -168,140 +169,159 @@
             const handleSaveCustom = () => {
                 if (customName.trim() && customNumber.trim() && customVendor.trim()) {
                     onSaveCustomAccount();
+                    setShowCustomModal(false);
                 }
             };
 
-            return (
-                <div className="space-y-3">
-                    <div className="relative" ref={dropdownRef}>
-                        {label && <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{label}</label>}
-                        <button
-                            type="button"
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-4 text-left flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                        >
-                            <span className="block truncate text-base sm:text-sm">
-                                {selectedValue === 'CUSTOM' && customName && customVendor
-                                    ? `${customName} - ${customVendor}`
-                                    : selectedOption 
-                                        ? `${selectedOption.name} - ${selectedOption.vendor}` 
-                                        : 'Pilih Rekening'}
-                            </span>
-                            <ChevronDown className="w-4 h-4 text-gray-500" />
-                        </button>
+            const handleCancelCustom = () => {
+                setShowCustomModal(false);
+                onCustomNameChange('');
+                onCustomNumberChange('');
+                onCustomVendorChange('');
+            };
 
-                        {isOpen && (
-                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none animate-fade-in sm:text-sm">
-                                {/* Regular accounts first */}
-                                {regularAccounts.map((option, index) => (
-                                    <div
-                                        key={index}
-                                        className={`cursor-pointer select-none relative py-3 pl-10 pr-4 hover:bg-gray-50 transition ${
-                                            option.number === selectedValue ? 'bg-gray-50 text-gray-900 font-medium' : 'text-gray-700'
-                                        }`}
-                                        onClick={() => handleSelect(option.number)}
-                                    >
-                                        {option.number === selectedValue && (
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900">
-                                                <Check className="w-4 h-4" />
-                                            </span>
-                                        )}
-                                        
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex flex-col flex-1 min-w-0 pr-2">
-                                                <span className="block truncate font-semibold">
-                                                    {`${option.name} - ${option.vendor}`}
+            return (
+                <>
+                    <div className="space-y-3">
+                        <div className="relative" ref={dropdownRef}>
+                            {label && <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{label}</label>}
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(!isOpen)}
+                                className="w-full bg-white border border-gray-300 rounded-lg py-2.5 px-4 text-left flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                            >
+                                <span className={`block truncate text-base sm:text-sm ${!selectedOption || selectedOption.number === 'CUSTOM' ? 'text-gray-400' : ''}`}>
+                                    {selectedOption && selectedOption.number !== 'CUSTOM'
+                                        ? `${selectedOption.name} - ${selectedOption.vendor}` 
+                                        : 'Select transfer destination account'}
+                                </span>
+                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                            </button>
+
+                            {isOpen && (
+                                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none animate-fade-in sm:text-sm">
+                                    {/* Regular accounts first */}
+                                    {regularAccounts.map((option, index) => (
+                                        <div
+                                            key={index}
+                                            className={`cursor-pointer select-none relative py-3 pl-10 pr-4 hover:bg-gray-50 transition ${
+                                                option.number === selectedValue ? 'bg-gray-50 text-gray-900 font-medium' : 'text-gray-700'
+                                            }`}
+                                            onClick={() => handleSelect(option.number)}
+                                        >
+                                            {option.number === selectedValue && (
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900">
+                                                    <Check className="w-4 h-4" />
                                                 </span>
-                                                <span className="block truncate text-xs text-gray-500">{option.number}</span>
-                                            </div>
+                                            )}
                                             
-                                            <button
-                                                onClick={(e) => handleDelete(e, option.number)}
-                                                className="text-gray-400 hover:text-red-500 transition p-1 rounded hover:bg-red-50 flex-shrink-0"
-                                                title="Hapus rekening"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                
-                                {/* Divider if there are regular accounts */}
-                                {regularAccounts.length > 0 && (
-                                    <div className="border-t border-gray-200 my-1"></div>
-                                )}
-                                
-                                {/* Custom option at the bottom */}
-                                {customOption && (
-                                    <div
-                                        className={`cursor-pointer select-none relative py-3 pl-10 pr-4 hover:bg-gray-50 transition ${
-                                            customOption.number === selectedValue ? 'bg-gray-50 text-gray-900 font-medium' : 'text-gray-700'
-                                        }`}
-                                        onClick={() => handleSelect(customOption.number)}
-                                    >
-                                        {customOption.number === selectedValue && (
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900">
-                                                <Check className="w-4 h-4" />
-                                            </span>
-                                        )}
-                                        
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex flex-col flex-1 min-w-0 pr-2">
-                                                <span className="block truncate font-semibold">
-                                                    ➕ Custom Account
-                                                </span>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                                    <span className="block truncate font-semibold">
+                                                        {`${option.name} - ${option.vendor}`}
+                                                    </span>
+                                                    <span className="block truncate text-xs text-gray-500">{option.number}</span>
+                                                </div>
+                                                
+                                                <button
+                                                    onClick={(e) => handleDelete(e, option.number)}
+                                                    className="text-gray-400 hover:text-red-500 transition p-1 rounded hover:bg-red-50 flex-shrink-0"
+                                                    title="Hapus rekening"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    ))}
+                                    
+                                    {/* Divider if there are regular accounts */}
+                                    {regularAccounts.length > 0 && (
+                                        <div className="border-t border-gray-200 my-1"></div>
+                                    )}
+                                    
+                                    {/* Custom option at the bottom */}
+                                    {customOption && (
+                                        <div
+                                            className="cursor-pointer select-none relative py-3 pl-10 pr-4 hover:bg-gray-50 transition text-gray-700"
+                                            onClick={() => handleSelect(customOption.number)}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                                    <span className="block truncate font-semibold text-gray-900">
+                                                        ➕ Add New Account
+                                                    </span>
+                                                    <span className="block truncate text-xs text-gray-500">
+                                                        Save account for later use
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {showCustomInput && (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3 animate-fade-in">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Nama Pemilik</label>
-                                <input
-                                    type="text"
-                                    value={customName}
-                                    onChange={(e) => onCustomNameChange(e.target.value)}
-                                    placeholder="Contoh: John Doe"
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm"
-                                />
+                    {/* Custom Account Modal */}
+                    {showCustomModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 animate-fade-in">
+                            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl animate-slide-down">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Add New Account</h3>
+                                
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Account Holder Name</label>
+                                        <input
+                                            type="text"
+                                            value={customName}
+                                            onChange={(e) => onCustomNameChange(e.target.value)}
+                                            placeholder="e.g. John Doe"
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Account Number</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={customNumber}
+                                            onChange={(e) => onCustomNumberChange(e.target.value)}
+                                            placeholder="e.g. 1234567890"
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Bank / E-Wallet</label>
+                                        <input
+                                            type="text"
+                                            value={customVendor}
+                                            onChange={(e) => onCustomVendorChange(e.target.value)}
+                                            placeholder="e.g. BCA, Mandiri, GoPay"
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleCancelCustom}
+                                        className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveCustom}
+                                        disabled={!customName.trim() || !customNumber.trim() || !customVendor.trim()}
+                                        className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-black transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Nomor Rekening</label>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={customNumber}
-                                    onChange={(e) => onCustomNumberChange(e.target.value)}
-                                    placeholder="Contoh: 1234567890"
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm font-mono"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Bank / E-Wallet</label>
-                                <input
-                                    type="text"
-                                    value={customVendor}
-                                    onChange={(e) => onCustomVendorChange(e.target.value)}
-                                    placeholder="Contoh: BCA, Mandiri, GoPay"
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-white text-base sm:text-sm"
-                                />
-                            </div>
-                            <button
-                                onClick={handleSaveCustom}
-                                disabled={!customName.trim() || !customNumber.trim() || !customVendor.trim()}
-                                className="w-full bg-gray-900 text-white py-2.5 rounded-lg hover:bg-black transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Simpan Rekening
-                            </button>
                         </div>
                     )}
-                </div>
+                </>
             );
         };
 
@@ -319,7 +339,7 @@
                                 onClick={onCancel}
                                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
                             >
-                                Batal
+                                Cancel
                             </button>
                             <button
                                 onClick={onConfirm}
@@ -335,7 +355,7 @@
 
         // --- MAIN APP ---
         function SplitBill() {
-            const appVersion = 'v1.4.0';
+            const appVersion = 'v2.0.1';
             const STORAGE_KEY = 'splitBillData';
             
             // Load initial data from localStorage or use defaults
@@ -372,7 +392,7 @@
             );
             
             const [selectedAccount, setSelectedAccount] = useState(
-                initialData?.selectedAccount || bankAccounts[0]?.number || 'CUSTOM'
+                initialData?.selectedAccount || null
             );
             const [customAccountName, setCustomAccountName] = useState(initialData?.customAccountName || '');
             const [customAccountNumber, setCustomAccountNumber] = useState(initialData?.customAccountNumber || '');
@@ -437,10 +457,10 @@
                         setCustomAccountNumber('');
                         setCustomAccountVendor('');
                         
-                        setCaptureStatus('Rekening berhasil disimpan!');
+                        setCaptureStatus('Account saved successfully!');
                         setTimeout(() => setCaptureStatus(''), 2000);
                     } else {
-                        setCaptureStatus('Rekening sudah ada!');
+                        setCaptureStatus('Account already exists!');
                         setTimeout(() => setCaptureStatus(''), 2000);
                     }
                 }
@@ -452,12 +472,12 @@
                 const updatedAccounts = bankAccounts.filter(acc => acc.number !== accountNumber);
                 setBankAccounts(updatedAccounts);
                 
-                // If the deleted account was selected, switch to CUSTOM
+                // If the deleted account was selected, switch to null (no selection)
                 if (selectedAccount === accountNumber) {
-                    setSelectedAccount('CUSTOM');
+                    setSelectedAccount(null);
                 }
                 
-                setCaptureStatus('Rekening berhasil dihapus!');
+                setCaptureStatus('Account deleted successfully!');
                 setTimeout(() => setCaptureStatus(''), 2000);
             };
 
@@ -471,7 +491,7 @@
                 setDiskon('');
                 setVoucher('');
                 // Don't reset bank accounts - keep them
-                setSelectedAccount('CUSTOM');
+                setSelectedAccount(null);
                 setCustomAccountName('');
                 setCustomAccountNumber('');
                 setCustomAccountVendor('');
@@ -486,7 +506,7 @@
                     diskon: '',
                     voucher: '',
                     bankAccounts: bankAccounts, // Preserve bank accounts
-                    selectedAccount: 'CUSTOM',
+                    selectedAccount: null,
                     customAccountName: '',
                     customAccountNumber: '',
                     customAccountVendor: '',
@@ -500,7 +520,7 @@
                 }
                 
                 setShowResetModal(false);
-                setCaptureStatus('Data berhasil direset!');
+                setCaptureStatus('Data reset successfully!');
                 setTimeout(() => setCaptureStatus(''), 2000);
             };
 
@@ -761,7 +781,7 @@
                 
                 setIsScanning(true);
                 setScanProgress(0);
-                setCaptureStatus('Memindai struk...');
+                setCaptureStatus('Scanning receipt...');
                 
                 try {
                     const result = await Tesseract.recognize(file, 'ind+eng', {
@@ -786,10 +806,10 @@
                     if (parsedData.diskon) setDiskon(parsedData.diskon);
                     if (parsedData.voucher) setVoucher(parsedData.voucher);
                     
-                    setCaptureStatus(`Berhasil! Ditemukan ${parsedData.items.length} item`);
+                    setCaptureStatus(`Success! Found ${parsedData.items.length} items`);
                 } catch (error) {
                     console.error(error);
-                    setCaptureStatus('Gagal memindai struk');
+                    setCaptureStatus('Failed to scan receipt');
                 }
                 
                 setTimeout(() => {
@@ -826,7 +846,7 @@
                     if (file.type.startsWith('image/')) {
                         handleScanReceipt(file);
                     } else {
-                        setCaptureStatus('File harus berupa gambar');
+                        setCaptureStatus('File must be an image');
                         setTimeout(() => setCaptureStatus(''), 2000);
                     }
                 }
@@ -835,7 +855,7 @@
             const handleCapture = async (actionType) => {
                 if (!summaryRef.current) return;
                 setIsCapturing(true);
-                setCaptureStatus('Memproses...');
+                setCaptureStatus('Processing...');
 
                 try {
                     // Wait for fonts to load
@@ -860,7 +880,7 @@
                         link.download = `split-bill-${Date.now()}.png`;
                         link.href = dataUrl;
                         link.click();
-                        setCaptureStatus('Berhasil didownload!');
+                        setCaptureStatus('Downloaded successfully!');
                     } else {
                         // Convert data URL to blob for clipboard
                         const response = await fetch(dataUrl);
@@ -870,15 +890,15 @@
                             await navigator.clipboard.write([
                                 new ClipboardItem({ 'image/png': blob })
                             ]);
-                            setCaptureStatus('Berhasil disalin!');
+                            setCaptureStatus('Copied successfully!');
                         } catch (err) {
                             console.error(err);
-                            setCaptureStatus('Gagal menyalin');
+                            setCaptureStatus('Failed to copy');
                         }
                     }
                 } catch (error) {
                     console.error(error);
-                    setCaptureStatus('Gagal memproses');
+                    setCaptureStatus('Failed to process');
                 }
 
                 setTimeout(() => {
@@ -893,18 +913,26 @@
                         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-8 border border-gray-100">
                             {/* Header */}
                             <div className="text-center mb-6 sm:mb-8">
-                                <div className="flex items-center justify-center gap-3 mb-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    {/* Left spacer - invisible icon for symmetry */}
+                                    <div className="w-9 h-9 opacity-0 pointer-events-none">
+                                        <RefreshCw className="w-5 h-5" />
+                                    </div>
+                                    
+                                    {/* Center title */}
                                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Split Bill</h1>
+                                    
+                                    {/* Right reset button */}
                                     <button
                                         onClick={() => setShowResetModal(true)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                        className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
                                         title="Reset semua data"
                                     >
                                         <RefreshCw className="w-5 h-5" />
                                     </button>
                                 </div>
-                                <p className="text-sm sm:text-base text-gray-500">Bagi tagihan dengan mudah dan adil</p>
-                                <p className="text-xs text-gray-400 mt-1">{appVersion} • Data tersimpan otomatis</p>
+                                <p className="text-sm sm:text-base text-gray-500">Split bills easily and fairly</p>
+                                <p className="text-xs text-gray-400 mt-1">{appVersion} • Auto-saved</p>
                             </div>
 
                             {/* Drag and Drop Zone */}
@@ -935,13 +963,13 @@
                                         </div>
                                         <div>
                                             <p className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-                                                {isDragging ? 'Lepaskan untuk memindai' : 'Scan Struk Belanja'}
+                                                {isDragging ? 'Drop to scan' : 'Scan Receipt'}
                                             </p>
                                             <p className="text-sm text-gray-500">
-                                                Drag & drop gambar atau klik untuk upload
+                                                Drag & drop image or click to upload
                                             </p>
                                             <p className="text-xs text-gray-400 mt-1">
-                                                Mendukung JPG, PNG (maks. 10MB)
+                                                Supports JPG, PNG (max 10MB)
                                             </p>
                                         </div>
                                         {!isScanning && (
@@ -954,9 +982,17 @@
                                                 }}
                                             >
                                                 <Upload className="w-5 h-5" />
-                                                Pilih File
+                                                Choose File
                                             </button>
                                         )}
+                                    </div>
+                                </div>
+                                
+                                {/* Disclaimer */}
+                                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 items-center">
+                                    <span className="text-amber-600 text-lg flex-shrink-0 leading-none mt-0.5">⚠️</span>
+                                    <div className="text-xs text-amber-800 flex-1">
+                                        <span className="font-semibold">Note:</span> The receipt scanning feature uses OCR and may not be 100% accurate. Please double-check the detected data before using it.
                                     </div>
                                 </div>
                             </div>
@@ -965,7 +1001,7 @@
                             <div className="bg-white rounded-xl p-4 sm:p-6 mb-6 border border-gray-200">
                                 <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
                                     <Users className="w-5 h-5 text-gray-700" />
-                                    <h2 className="text-lg font-bold text-gray-900">Daftar Orang</h2>
+                                    <h2 className="text-lg font-bold text-gray-900">People List</h2>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-2 mb-4">
                                     <input
@@ -973,18 +1009,18 @@
                                         value={newPersonName}
                                         onChange={(e) => setNewPersonName(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && addPerson()}
-                                        placeholder="Nama orang (Tekan Enter)"
+                                        placeholder="Person name (Press Enter)"
                                         className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 focus:outline-none bg-gray-50 text-base sm:text-sm"
                                     />
                                     <button
                                         onClick={addPerson}
                                         className="bg-gray-900 text-white px-6 py-2.5 rounded-lg hover:bg-black transition shadow-sm font-medium"
                                     >
-                                        Tambah
+                                        Add
                                     </button>
                                 </div>
                                 {persons.length === 0 ? (
-                                    <p className="text-sm text-gray-400 italic">Belum ada orang yang ditambahkan.</p>
+                                    <p className="text-sm text-gray-400 italic">No people added yet.</p>
                                 ) : (
                                     <div className="flex flex-wrap gap-2">
                                         {persons.map(person => (
@@ -1006,7 +1042,7 @@
                             <div className="bg-white rounded-xl p-4 sm:p-6 mb-6 border border-gray-200">
                                 <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
                                     <DollarSign className="w-5 h-5 text-gray-700" />
-                                    <h2 className="text-lg font-bold text-gray-900">Daftar Item</h2>
+                                    <h2 className="text-lg font-bold text-gray-900">Items List</h2>
                                 </div>
                                 
                                 <div className="space-y-6">
@@ -1030,7 +1066,7 @@
                                                 <button
                                                     onClick={() => removeItem(item.id)}
                                                     className="p-2 bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 transition shadow-sm h-[46px] w-[46px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shrink-0"
-                                                    title="Hapus Item"
+                                                    title="Delete Item"
                                                 >
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
@@ -1039,7 +1075,7 @@
                                             <div className="mt-4">
                                                 <div className="flex flex-wrap gap-2">
                                                     {persons.length === 0 ? (
-                                                        <span className="text-xs text-gray-400">Tambahkan orang terlebih dahulu</span>
+                                                        <span className="text-xs text-gray-400">Add people first</span>
                                                     ) : persons.map(person => (
                                                         <button
                                                             key={person}
@@ -1064,7 +1100,7 @@
                                     className="w-full mt-6 border-2 border-dashed border-gray-300 text-gray-500 py-3 rounded-lg hover:border-gray-400 hover:text-gray-700 transition flex items-center justify-center gap-2"
                                 >
                                     <Plus className="w-5 h-5" />
-                                    Tambah Item
+                                    Add Item
                                 </button>
                             </div>
 
@@ -1072,18 +1108,18 @@
                             <div className="bg-white rounded-xl p-4 sm:p-6 mb-6 border border-gray-200">
                                 <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
                                     <CreditCard className="w-5 h-5 text-gray-700" />
-                                    <h2 className="text-lg font-bold text-gray-900">Biaya Tambahan</h2>
+                                    <h2 className="text-lg font-bold text-gray-900">Additional Costs</h2>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <FormattedInput label="Ongkir" value={ongkir} onChange={setOngkir} />
-                                    <FormattedInput label="Biaya Layanan" value={biayaLayanan} onChange={setBiayaLayanan} />
-                                    <FormattedInput label="Pajak / Tax" value={tax} onChange={setTax} type="percentage" placeholder="0" />
-                                    <FormattedInput label="Diskon Promo" value={diskon} onChange={setDiskon} />
+                                    <FormattedInput label="Shipping" value={ongkir} onChange={setOngkir} />
+                                    <FormattedInput label="Service Fee" value={biayaLayanan} onChange={setBiayaLayanan} />
+                                    <FormattedInput label="Tax" value={tax} onChange={setTax} type="percentage" placeholder="0" />
+                                    <FormattedInput label="Promo Discount" value={diskon} onChange={setDiskon} />
                                     <FormattedInput label="Voucher" value={voucher} onChange={setVoucher} />
                                     
                                     {/* Account Selector Component */}
                                     <AccountSelector 
-                                        label="Rekening Bank"
+                                        label="Bank Account"
                                         options={bankAccounts}
                                         selectedValue={selectedAccount}
                                         onChange={setSelectedAccount}
@@ -1099,112 +1135,116 @@
                                 </div>
                             </div>
 
-                            {/* Summary Section */}
-                            <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                                <div 
-                                    ref={summaryRef} 
-                                    className="bg-gray-50 p-5 sm:p-8"
-                                > 
-                                    <div className="flex items-center gap-3 mb-5">
-                                        <div className="bg-gray-900 rounded-full p-1.5">
-                                            <DollarSign className="w-5 h-5 text-white" />
-                                        </div>
-                                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 uppercase tracking-wide leading-none">
-                                            Ringkasan Pembayaran
-                                        </h2>
-                                    </div>
-                                    
-                                    <div className="space-y-3 mb-5 text-sm border-b border-gray-300 pb-4">
-                                        <div className="flex justify-between items-center gap-4">
-                                            <span className="text-gray-600 whitespace-nowrap">Subtotal Pesanan:</span>
-                                            <span className="font-mono text-gray-900 whitespace-nowrap">Rp {formatMoney(subtotal)}</span>
-                                        </div>
-
-                                        {taxAmount > 0 && (
-                                            <div className="flex justify-between items-center gap-4">
-                                                <span className="text-gray-600 whitespace-nowrap">Pajak ({tax}%):</span>
-                                                <span className="font-mono text-gray-900 whitespace-nowrap">Rp {formatMoney(taxAmount)}</span>
-                                            </div>
-                                        )}
-
-                                        {totalDiscount > 0 && (
-                                            <div className="flex justify-between items-center gap-4">
-                                                <span className="text-gray-600 whitespace-nowrap">Total Diskon:</span>
-                                                <span className="font-mono text-gray-900 whitespace-nowrap">- Rp {formatMoney(totalDiscount)}</span>
-                                            </div>
-                                        )}
-                                        {(Number(ongkir) > 0 || Number(biayaLayanan) > 0) && (
-                                            <div className="flex justify-between items-center gap-4">
-                                                <span className="text-gray-600 whitespace-nowrap">Biaya Lainnya:</span>
-                                                <span className="font-mono text-gray-900 whitespace-nowrap">
-                                                    Rp {formatMoney(Number(ongkir) + Number(biayaLayanan))}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between items-center gap-4 pt-2">
-                                            <span className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Total:</span>
-                                            <span className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Rp {formatMoney(grandTotal)}</span>
-                                        </div>
-                                    </div>
-
-                                    {selectedAccount && (
-                                        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-5">
-                                            <div className="flex items-center gap-2 mb-2 text-gray-500">
-                                                <CreditCard className="w-4 h-4 flex-shrink-0" />
-                                                <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">Transfer ke: {getSelectedAccountName()}</span>
-                                            </div>
-                                            <div className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">
-                                                {getSelectedAccountVendor()} - {getSelectedAccountNumber()}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <h3 className="font-bold text-gray-900 mb-3 text-xs uppercase tracking-widest">Pembagian Per Orang:</h3>
-                                        <div className="space-y-2">
-                                            {persons.map(person => (
-                                                <div key={person} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
-                                                    <span className="font-medium text-gray-700 truncate pr-4">{person}</span>
-                                                    <span className="text-base sm:text-lg font-bold text-gray-900 font-mono whitespace-nowrap flex-shrink-0">
-                                                        Rp {formatMoneySplit(personTotals[person] || 0)}
-                                                    </span>
+                            {/* Summary Section - Only show if there's order data */}
+                            {subtotal > 0 && persons.length > 0 && (
+                                <>
+                                    <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                                        <div 
+                                            ref={summaryRef} 
+                                            className="bg-gray-50 p-5 sm:p-8"
+                                        > 
+                                            <div className="flex items-center gap-3 mb-5">
+                                                <div className="bg-gray-900 rounded-full p-1.5">
+                                                    <DollarSign className="w-5 h-5 text-white" />
                                                 </div>
-                                            ))}
+                                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 uppercase tracking-wide leading-none">
+                                                    Payment Summary
+                                                </h2>
+                                            </div>
+                                            
+                                            <div className="space-y-3 mb-5 text-sm border-b border-gray-300 pb-4">
+                                                <div className="flex justify-between items-center gap-4">
+                                                    <span className="text-gray-600 whitespace-nowrap">Order Subtotal:</span>
+                                                    <span className="font-mono text-gray-900 whitespace-nowrap">Rp {formatMoney(subtotal)}</span>
+                                                </div>
+
+                                                {taxAmount > 0 && (
+                                                    <div className="flex justify-between items-center gap-4">
+                                                        <span className="text-gray-600 whitespace-nowrap">Tax ({tax}%):</span>
+                                                        <span className="font-mono text-gray-900 whitespace-nowrap">Rp {formatMoney(taxAmount)}</span>
+                                                    </div>
+                                                )}
+
+                                                {totalDiscount > 0 && (
+                                                    <div className="flex justify-between items-center gap-4">
+                                                        <span className="text-gray-600 whitespace-nowrap">Total Discount:</span>
+                                                        <span className="font-mono text-gray-900 whitespace-nowrap">- Rp {formatMoney(totalDiscount)}</span>
+                                                    </div>
+                                                )}
+                                                {(Number(ongkir) > 0 || Number(biayaLayanan) > 0) && (
+                                                    <div className="flex justify-between items-center gap-4">
+                                                        <span className="text-gray-600 whitespace-nowrap">Other Fees:</span>
+                                                        <span className="font-mono text-gray-900 whitespace-nowrap">
+                                                            Rp {formatMoney(Number(ongkir) + Number(biayaLayanan))}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-center gap-4 pt-2">
+                                                    <span className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Total:</span>
+                                                    <span className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Rp {formatMoney(grandTotal)}</span>
+                                                </div>
+                                            </div>
+
+                                            {selectedAccount && selectedAccount !== 'CUSTOM' && selectedAccount !== null && (
+                                                <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-5">
+                                                    <div className="flex items-center gap-2 mb-2 text-gray-500">
+                                                        <CreditCard className="w-4 h-4 flex-shrink-0" />
+                                                        <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">Transfer to: {getSelectedAccountName()}</span>
+                                                    </div>
+                                                    <div className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">
+                                                        {getSelectedAccountVendor()} - {getSelectedAccountNumber()}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 mb-3 text-xs uppercase tracking-widest">Split Per Person:</h3>
+                                                <div className="space-y-2">
+                                                    {persons.map(person => (
+                                                        <div key={person} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200">
+                                                            <span className="font-medium text-gray-700 truncate pr-4">{person}</span>
+                                                            <span className="text-base sm:text-lg font-bold text-gray-900 font-mono whitespace-nowrap flex-shrink-0">
+                                                                Rp {formatMoneySplit(personTotals[person] || 0)}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    onClick={() => handleCapture('download')}
-                                    disabled={isCapturing}
-                                    className="flex-1 bg-white border border-gray-300 text-gray-900 py-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    Download
-                                </button>
-                                <button
-                                    onClick={() => handleCapture('copy')}
-                                    disabled={isCapturing}
-                                    className="flex-1 bg-gray-900 text-white py-3 rounded-lg hover:bg-black transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-gray-200"
-                                >
-                                    <Copy className="w-5 h-5" />
-                                    Copy Image
-                                </button>
-                            </div>
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <button
+                                            onClick={() => handleCapture('download')}
+                                            disabled={isCapturing}
+                                            className="flex-1 bg-white border border-gray-300 text-gray-900 py-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        >
+                                            <Download className="w-5 h-5" />
+                                            Download
+                                        </button>
+                                        <button
+                                            onClick={() => handleCapture('copy')}
+                                            disabled={isCapturing}
+                                            className="flex-1 bg-gray-900 text-white py-3 rounded-lg hover:bg-black transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-gray-200"
+                                        >
+                                            <Copy className="w-5 h-5" />
+                                            Copy Image
+                                        </button>
+                                    </div>
+                                </>
+                            )}
 
                             {/* Status Notification */}
                             {(captureStatus || isScanning) && (
                                 <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down w-[90%] max-w-xs sm:max-w-sm">
                                     <div className={`px-4 py-3 rounded-lg shadow-xl font-medium border text-sm sm:text-base ${
-                                        captureStatus.includes('Berhasil') 
+                                        captureStatus.includes('Success') || captureStatus.includes('successful') || captureStatus.includes('berhasil') || captureStatus.includes('Berhasil')
                                             ? 'bg-gray-900 text-white border-gray-900' 
                                             : 'bg-white text-gray-900 border-gray-200'
                                     }`}>
                                         <div className="flex items-center justify-center gap-2">
-                                            {(captureStatus.includes('Memproses') || isScanning) && (
+                                            {(captureStatus.includes('Processing') || captureStatus.includes('Memproses') || isScanning) && (
                                                 <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                 </svg>
@@ -1231,8 +1271,8 @@
                                 isOpen={showResetModal}
                                 onConfirm={resetAllData}
                                 onCancel={() => setShowResetModal(false)}
-                                title="Reset Semua Data?"
-                                message="Tindakan ini akan menghapus semua data termasuk item, orang, dan biaya. Data tidak dapat dikembalikan."
+                                title="Reset All Data?"
+                                message="This action will delete all data including items, people, and costs. Data cannot be recovered."
                             />
                         </div>
                     </div>
