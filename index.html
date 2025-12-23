@@ -315,6 +315,9 @@
         const GripVertical = ({ className }) => (
             <svg className={className || "w-6 h-6"} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/></svg>
         );
+        const Calculator = ({ className }) => (
+            <svg className={className || "w-6 h-6"} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+        );
 
         // --- HELPER COMPONENT: Formatted Input ---
         const FormattedInput = ({ label, value, onChange, type = 'currency', placeholder = '0', title }) => {
@@ -581,7 +584,7 @@
 
         // --- MAIN APP ---
         function SplitBill() {
-            const appVersion = 'v2.1.0';
+            const appVersion = 'v2.2.0';
             const STORAGE_KEY = 'splitBillData';
             const LANGUAGE_KEY = 'splitBillLanguage';
             
@@ -675,6 +678,11 @@
             const [dragOverIndex, setDragOverIndex] = useState(null);
             const [collapsedSections, setCollapsedSections] = useState({});
             const [roundTo100, setRoundTo100] = useState(initialData?.roundTo100 || false);
+            const [showCalculator, setShowCalculator] = useState(false);
+            const [calcDisplay, setCalcDisplay] = useState('0');
+            const [calcPrevValue, setCalcPrevValue] = useState(null);
+            const [calcOperation, setCalcOperation] = useState(null);
+            const [calcHistory, setCalcHistory] = useState('');
 
             useEffect(() => {
                 if (darkMode) {
@@ -1242,6 +1250,63 @@
                 }, 2000);
             };
 
+            const handleCalcNumber = (num) => {
+                setCalcDisplay(prev => prev === '0' ? num : prev + num);
+            };
+
+            const handleCalcOperation = (op) => {
+                const current = parseFloat(calcDisplay);
+                if (calcPrevValue === null) {
+                    setCalcHistory(calcDisplay + op);
+                    setCalcPrevValue(current);
+                } else {
+                    let result = 0;
+                    switch(calcOperation) {
+                        case '+': result = calcPrevValue + current; break;
+                        case '-': result = calcPrevValue - current; break;
+                        case '×': result = calcPrevValue * current; break;
+                        case '÷': result = current !== 0 ? calcPrevValue / current : 0; break;
+                    }
+                    setCalcHistory(result + op);
+                    setCalcPrevValue(result);
+                    setCalcDisplay(result.toString());
+                }
+                setCalcOperation(op);
+                setCalcDisplay('0');
+            };
+
+            const handleCalcEquals = () => {
+                if (calcPrevValue === null || calcOperation === null) return;
+                const current = parseFloat(calcDisplay);
+                let result = 0;
+                
+                switch(calcOperation) {
+                    case '+': result = calcPrevValue + current; break;
+                    case '-': result = calcPrevValue - current; break;
+                    case '×': result = calcPrevValue * current; break;
+                    case '÷': result = current !== 0 ? calcPrevValue / current : 0; break;
+                }
+                
+                setCalcHistory(calcHistory + calcDisplay);
+                setCalcDisplay(result.toString());
+                setCalcPrevValue(null);
+                setCalcOperation(null);
+            };
+
+            const handleCalcClear = () => {
+                setCalcDisplay('0');
+                setCalcPrevValue(null);
+                setCalcOperation(null);
+                setCalcHistory('');
+            };
+
+            const handleCalcBackspace = () => {
+                setCalcDisplay(prev => {
+                    if (prev.length <= 1) return '0';
+                    return prev.slice(0, -1);
+                });
+            };
+
             return (
                 <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 py-6 px-3 sm:py-8 sm:px-4 font-sans transition-colors">
                     <div className="max-w-4xl mx-auto">
@@ -1267,6 +1332,13 @@
                                                 title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                                             >
                                                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCalculator(!showCalculator)}
+                                                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                                title="Toggle calculator"
+                                            >
+                                                <Calculator className="w-5 h-5" />
                                             </button>
                                             <button
                                                 onClick={() => setShowOCR(!showOCR)}
@@ -1834,6 +1906,55 @@
                             />
                         </div>
                     </div>
+
+                    {/* Floating Calculator - Desktop Only */}
+                    {showCalculator && (
+                        <div className="hidden md:block fixed top-20 right-6 z-40 animate-fade-in">
+                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-64">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Calculator</span>
+                                    <button
+                                        onClick={() => setShowCalculator(false)}
+                                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                                    >
+                                        <span className="text-xl leading-none">×</span>
+                                    </button>
+                                </div>
+                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-3">
+                                    <div className="text-sm font-mono text-gray-500 dark:text-gray-400 text-right mb-1 h-5 truncate">
+                                        {calcHistory || '\u00A0'}
+                                    </div>
+                                    <div className="text-2xl font-mono font-bold text-gray-900 dark:text-gray-100 text-right truncate">
+                                        {calcDisplay}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                    <button onClick={handleCalcClear} className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">C</button>
+                                    <button onClick={handleCalcBackspace} className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition text-xl">⌫</button>
+                                    <button onClick={() => handleCalcOperation('÷')} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">÷</button>
+                                    <button onClick={() => handleCalcOperation('×')} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">×</button>
+                                    
+                                    {['7','8','9'].map(n => (
+                                        <button key={n} onClick={() => handleCalcNumber(n)} className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">{n}</button>
+                                    ))}
+                                    <button onClick={() => handleCalcOperation('-')} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">-</button>
+                                    
+                                    {['4','5','6'].map(n => (
+                                        <button key={n} onClick={() => handleCalcNumber(n)} className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">{n}</button>
+                                    ))}
+                                    <button onClick={() => handleCalcOperation('+')} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">+</button>
+                                    
+                                    {['1','2','3'].map(n => (
+                                        <button key={n} onClick={() => handleCalcNumber(n)} className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">{n}</button>
+                                    ))}
+                                    <button onClick={handleCalcEquals} className="row-span-2 bg-gray-900 dark:bg-gray-600 hover:bg-black dark:hover:bg-gray-500 text-white rounded-lg py-3 font-semibold transition">=</button>
+                                    
+                                    <button onClick={() => handleCalcNumber('0')} className="col-span-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">0</button>
+                                    <button onClick={() => handleCalcNumber('.')} className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg py-3 font-semibold transition">.</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
