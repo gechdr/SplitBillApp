@@ -584,7 +584,7 @@
 
         // --- MAIN APP ---
         function SplitBill() {
-            const appVersion = 'v2.4.1';
+            const appVersion = 'v2.5.0';
             const STORAGE_KEY = 'splitBillData';
             const LANGUAGE_KEY = 'splitBillLanguage';
             
@@ -638,6 +638,7 @@
             const [ongkir, setOngkir] = useState(initialData?.ongkir || '');
             const [biayaLayanan, setBiayaLayanan] = useState(initialData?.biayaLayanan || '');
             const [tax, setTax] = useState(initialData?.tax || ''); 
+            const [taxType, setTaxType] = useState(initialData?.taxType || 'percentage'); 
             const [parking, setParking] = useState(initialData?.parking || '0');
             const [diskon, setDiskon] = useState(initialData?.diskon || '');
             const [voucher, setVoucher] = useState(initialData?.voucher || '');
@@ -738,6 +739,7 @@
                     ongkir,
                     biayaLayanan,
                     tax,
+                    taxType,
                     parking,
                     diskon,
                     voucher,
@@ -755,7 +757,7 @@
                 } catch (error) {
                     console.error('Error saving to localStorage:', error);
                 }
-            }, [items, persons, ongkir, biayaLayanan, tax, parking, diskon, voucher, bankAccounts, selectedAccount, customAccountName, customAccountNumber, customAccountVendor, roundTo100]);
+            }, [items, persons, ongkir, biayaLayanan, tax, taxType, parking, diskon, voucher, bankAccounts, selectedAccount, customAccountName, customAccountNumber, customAccountVendor, roundTo100]);
 
             const saveCustomAccount = () => {
                 if (customAccountName.trim() && customAccountNumber.trim() && customAccountVendor.trim()) {
@@ -808,6 +810,7 @@
                 setOngkir('');
                 setBiayaLayanan('');
                 setTax('');
+                setTaxType('percentage');
                 setParking('0');
                 setDiskon('');
                 setVoucher('');
@@ -920,7 +923,9 @@
                     }
                 }, 0);
                 
-                const taxAmount = (subtotal * (Number(tax || 0))) / 100;
+                const taxAmount = taxType === 'percentage' 
+                    ? (subtotal * (Number(tax || 0))) / 100
+                    : Number(tax || 0);
                 const totalDiscount = Number(diskon || 0) + Number(voucher || 0);
                 const sharedFees = Number(ongkir || 0) + Number(biayaLayanan || 0) + Number(parking || 0);
                 const totalBiaya = sharedFees + taxAmount;
@@ -1639,7 +1644,20 @@
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <FormattedInput label={t.shipping} value={ongkir} onChange={setOngkir} title={t.tooltipShipping} />
                                     <FormattedInput label={t.serviceFee} value={biayaLayanan} onChange={setBiayaLayanan} title={t.tooltipServiceFee} />
-                                    <FormattedInput label={t.tax} value={tax} onChange={setTax} type="percentage" placeholder="0" title={t.tooltipTax} />
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 uppercase mb-1">{t.tax}</label>
+                                        <div className="flex gap-2">
+                                            <div className="flex-1">
+                                                <FormattedInput value={tax} onChange={setTax} type={taxType} placeholder="0" title={t.tooltipTax} />
+                                            </div>
+                                            <button
+                                                onClick={() => setTaxType(taxType === 'percentage' ? 'currency' : 'percentage')}
+                                                className="px-3 py-2.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 rounded-lg transition border border-gray-300 dark:border-gray-600 text-sm font-medium whitespace-nowrap"
+                                            >
+                                                {taxType === 'percentage' ? '%' : 'Rp'}
+                                            </button>
+                                        </div>
+                                    </div>
                                     <FormattedInput label={t.parking} value={parking} onChange={setParking} title={t.tooltipParking} />
                                     <FormattedInput label={t.promoDiscount} value={diskon} onChange={setDiskon} title={t.tooltipDiscount} />
                                     <FormattedInput label={t.voucher} value={voucher} onChange={setVoucher} title={t.tooltipVoucher} />
@@ -1711,7 +1729,7 @@
 
                                                 {taxAmount > 0 && (
                                                     <div className="flex justify-between items-center gap-4">
-                                                        <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{t.tax} ({tax}%):</span>
+                                                        <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{t.tax}{taxType === 'percentage' ? ` (${tax}%)` : ''}:</span>
                                                         <span className="font-mono text-gray-900 dark:text-gray-100 whitespace-nowrap">Rp {formatMoney(taxAmount)}</span>
                                                     </div>
                                                 )}
